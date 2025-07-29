@@ -1,0 +1,53 @@
+[
+  {
+    "type": "field",
+    "inboundTag": [
+      "api"
+    ],
+    "outboundTag": "api"
+  },
+  {
+    "type": "field",
+    "outboundTag": "blocked",
+    "ip": [
+      "geoip:private"
+    ]
+  },
+  {
+    "type": "field",
+    "outboundTag": "blocked",
+    "protocol": [
+      "bittorrent"
+    ]
+  },
+	{
+    "type": "field",
+    "outboundTag": "blocked",
+    "domain": [
+      "geosite:ru-blocked"
+    ]
+  },
+  {
+    "type": "field",
+    "outboundTag": "direct",
+    "ip": [
+      "geoip:ru"
+    ]
+  },
+  {
+    "type": "field",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:category-ads-all",
+      "geosite:win-spy",
+      "geosite:win-update"
+    ]
+  },
+  {
+    "type": "field",
+    "outboundTag": "proxy",
+    "ip": [
+      "geoip:!ru"
+    ]
+  }
+]

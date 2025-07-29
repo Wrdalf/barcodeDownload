@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YML Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.10/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        function App() {
+            const [builds, setBuilds] = React.useState([]);
+            const [currentBuild, setCurrentBuild] = React.useState('');
+            const [currentDate, setCurrentDate] = React.useState('');
+            const [articles, setArticles] = React.useState('');
+            const [error, setError] = React.useState('');
+            const [singleArticle, setSingleArticle] = React.useState('');
+
+            const validateDate = (date) => {
+                const pattern = /^\d{2}\.\d{2}\.\d{4}$/;
+                if (!pattern.test(date)) return false;
+                try {
+                    const [day, month, year] = date.split('.').map(Number);
+                    const d = new Date(year, month - 1, day);
+                    return d.getDate() === day && d.getMonth() === month - 1 && d.getFullYear() === year;
+                } catch {
+                    return false;
+                }
+            };
+
+            const parseArticle = (line) => {
+                const sid = line.trim();
+                if (!/^\d+$/.test(sid)) return null; // Проверяем, что sid — это число
+                return { sid, name: `Товар ${sid}` }; // Генерируем имя-заглушку
+            };
+
+            const addBuild = () => {
+                if (!currentBuild.trim()) {
+                    setError('Название сборки не может быть пустым');
+                    return;
+                }
+                if (!validateDate(currentDate)) {
+                    setError('Дата должна быть в формате дд.мм.гггг (например, 30.05.2025)');
+                    return;
+                }
+                const newArticles = articles.trim().split('\n').map(line => parseArticle(line)).filter(a => a);
+                if (newArticles.length === 0 && !singleArticle.trim()) {
+                    setError('Добавьте хотя бы один артикул');
+                    return;
+                }
+                const single = singleArticle.trim() ? parseArticle(singleArticle) : null;
+                setBuilds([...builds, {
+                    name: currentBuild.trim().slice(0, 10),
+                    date: currentDate.trim().slice(0, 10),
+                    articles: [...newArticles, ...(single ? [single] : [])]
+                }]);
+                setCurrentBuild('');
+                setCurrentDate('');
+                setArticles('');
+                setSingleArticle('');
+                setError('');
+            };
+
+            const addSingleArticle = () => {
+                if (!singleArticle.trim()) {
+                    setError('Артикул не может быть пустым');
+                    return;
+                }
+                const parsed = parseArticle(singleArticle);
+                if (!parsed) {
+                    setError('Артикул должен быть числом');
+                    return;
+                }
+                setArticles(articles ? `${articles}\n${singleArticle}` : singleArticle);
+                setSingleArticle('');
+                setError('');
+            };
+
+            const generateYML = () => {
+                let xml = `<?xml version="1.0" encoding="utf-8"?>\n`;
+                xml += `<yml_catalog date="${new Date().toISOString()}">\n`;
+                xml += `  <shop>\n    <offers>\n`;
+                builds.forEach(build => {
+                    build.articles.forEach(item => {
+                        xml += `      <offer id="${item.sid}">\n`;
+                        xml += `        <name>${item.name}</name>\n`;
+                        xml += `        <oshiptag color="yellow">${build.name}</oshiptag>\n`;
+                        xml += `        <oshiptag color="yellow">${build.date}</oshiptag>\n`;
+                        xml += `      </offer>\n`;
+                    });
+                });
+                xml += `    </offers>\n  </shop>\n</yml_catalog>`;
+                
+                const blob = new Blob([xml], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'output.yml';
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            return (
+                <div className="container mx-auto p-4 max-w-2xl">
+                    <h1 className="text-2xl font-bold mb-4">YML Generator</h1>
+                    {error && <p className="text-red-500 mb-4">{error}</p>}
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium">Название сборки (до 10 символов):</label>
+                        <input
+                            type="text"
+                            value={currentBuild}
+                            onChange={e => setCurrentBuild(e.target.value)}
+                            className="mt-1 p-2 w-full border rounded"
+                            placeholder="БОНД 34 ШТ"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium">Дата сборки (дд.мм.гггг):</label>
+                        <input
+                            type="text"
+                            value={currentDate}
+                            onChange={e => setCurrentDate(e.target.value)}
+                            className="mt-1 p-2 w-full border rounded"
+                            placeholder="30.05.2025"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium">Артикулы (каждый на новой строке):</label>
+                        <textarea
+                            value={articles}
+                            onChange={e => setArticles(e.target.value)}
+                            className="mt-1 p-2 w-full border rounded"
+                            rows="6"
+                            placeholder="10709478
+1280148
+10408313"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium">Добавить артикул по одному:</label>
+                        <input
+                            type="text"
+                            value={singleArticle}
+                            onChange={e => setSingleArticle(e.target.value)}
+                            className="mt-1 p-2 w-full border rounded"
+                            placeholder="10709478"
+                        />
+                        <button
+                            onClick={addSingleArticle}
+                            className="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                        >
+                            Добавить артикул
+                        </button>
+                    </div>
+                    <div className="flex space-x-4 mb-4">
+                        <button
+                            onClick={addBuild}
+                            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                        >
+                            Добавить сборку
+                        </button>
+                        <button
+                            onClick={generateYML}
+                            className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+                            disabled={builds.length === 0}
+                        >
+                            Сгенерировать YML
+                        </button>
+                    </div>
+                    {builds.length > 0 && (
+                        <div>
+                            <h2 className="text-xl font-semibold">Добавленные сборки:</h2>
+                            {builds.map((build, index) => (
+                                <div key={index} className="mt-2">
+                                    <p><strong>Сборка {index + 1}:</strong> {build.name} ({build.date})</p>
+                                    <p><strong>Артикулы:</strong> {build.articles.length}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
